@@ -65,15 +65,16 @@
                         </tr>
                     </thead>
                     <tbody id="tabla_asistencia" class="text-sm text-gray-600">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = "http://127.0.0.1:8000";
-        let datosActuales = []; // Variable global para guardar los datos cargados
+        // URL corregida apuntando directamente a la raíz de tu servicio en Render
+        const API_URL = "https://asistencias-qd53.onrender.com";
+        let datosActuales = []; 
 
         async function registrarEntrada() {
             const carnet_universitario = document.getElementById('en_carnet').value.trim();
@@ -120,7 +121,7 @@
 
         async function cargarHistorial() {
             const response = await fetch(`${API_URL}/historial`);
-            datosActuales = await response.json(); // Guardamos los datos
+            datosActuales = await response.json(); 
             const tbody = document.getElementById('tabla_asistencia');
             tbody.innerHTML = '';
 
@@ -138,25 +139,20 @@
             });
         }
 
-        // --- NUEVA FUNCIÓN PARA DESCARGAR EN EXCEL ---
         function descargarExcel() {
             if (datosActuales.length === 0) {
                 return alert("No hay datos registrados para descargar todavía.");
             }
 
-            // Definimos las cabeceras del archivo Excel
             let contenidoCsv = "Carnet Universitario,Nombre Completo,Materia,Hora Entrada,Hora Salida\n";
 
-            // Recorremos los datos y los unimos separados por comas
             datosActuales.forEach(p => {
-                // Limpiamos posibles comas dentro de los nombres para no romper las columnas
                 let nombreLimpio = p.nombre.replace(/,/g, '');
                 let materiaLimpia = p.materia.replace(/,/g, '');
                 
                 contenidoCsv += `${p.carnet_universitario},${nombreLimpio},${materiaLimpia},${p.entrada},${p.salida}\n`;
             });
 
-            // Creamos un elemento invisible en el navegador para forzar la descarga del archivo
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), contenidoCsv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
