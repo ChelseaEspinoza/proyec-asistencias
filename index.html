@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Asistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-6">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <h1 class="text-3xl font-bold text-center text-slate-800">Control de Acceso y Asistencia - Exposiciones</h1>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4 text-slate-700 border-b pb-2">Registrar Entrada</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Carnet Universitario</label>
+                        <input type="text" id="en_carnet" placeholder="Ej. 24-1234" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nombre Completo</label>
+                        <input type="text" id="en_nom" placeholder="Nombres y Apellidos" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Materia</label>
+                        <input type="text" id="en_mat" placeholder="Materia por la que asiste" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-slate-400">
+                    </div>
+                    <button onclick="registrarEntrada()" class="w-full bg-slate-700 text-white p-2 rounded font-medium hover:bg-slate-800 transition">Marcar Ingreso</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 text-slate-700 border-b pb-2">Registrar Salida</h2>
+                    <div class="space-y-4 pt-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Carnet Universitario</label>
+                            <input type="text" id="sal_carnet" placeholder="Ingrese el carnet para marcar salida" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        </div>
+                        <button onclick="registrarSalida()" class="w-full bg-stone-600 text-white p-2 rounded font-medium hover:bg-stone-700 transition">Marcar Salida</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-slate-700">Listado de Asistencia en Tiempo Real</h2>
+                <div class="space-x-2">
+                    <button onclick="cargarHistorial()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded font-medium text-sm hover:bg-slate-300 transition">Actualizar Tabla</button>
+                    <button onclick="descargarExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded font-medium text-sm hover:bg-emerald-700 transition">Descargar Reporte Excel</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs tracking-wider border-b">
+                            <th class="p-3 font-semibold">Carnet Univ.</th>
+                            <th class="p-3 font-semibold">Nombre Completo</th>
+                            <th class="p-3 font-semibold">Materia</th>
+                            <th class="p-3 font-semibold">Hora Entrada</th>
+                            <th class="p-3 font-semibold">Hora Salida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla_asistencia" class="text-sm text-gray-600">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let datosActuales = []; // Variable global para guardar los datos cargados
+
+        async function registrarEntrada() {
+            const carnet_universitario = document.getElementById('en_carnet').value.trim();
+            const nombre = document.getElementById('en_nom').value.trim();
+            const materia = document.getElementById('en_mat').value.trim();
+
+            if(!carnet_universitario || !nombre || !materia) {
+                return alert("Por favor, complete todos los campos para el ingreso.");
+            }
+
+            const response = await fetch(`${API_URL}/entrada`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ carnet_universitario, nombre, materia })
+            });
+            const data = await response.json();
+            alert(data.mensaje);
+            
+            document.getElementById('en_carnet').value = '';
+            document.getElementById('en_nom').value = '';
+            document.getElementById('en_mat').value = '';
+            cargarHistorial();
+        }
+
+        async function registrarSalida() {
+            const carnet_universitario = document.getElementById('sal_carnet').value.trim();
+            if(!carnet_universitario) return alert("Por favor, introduzca el carnet universitario.");
+
+            const response = await fetch(`${API_URL}/salida`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ carnet_universitario })
+            });
+
+            const data = await response.json();
+            if(response.ok) {
+                alert(data.mensaje);
+                document.getElementById('sal_carnet').value = '';
+                cargarHistorial();
+            } else {
+                alert(data.detail);
+            }
+        }
+
+        async function cargarHistorial() {
+            const response = await fetch(`${API_URL}/historial`);
+            datosActuales = await response.json(); // Guardamos los datos
+            const tbody = document.getElementById('tabla_asistencia');
+            tbody.innerHTML = '';
+
+            datosActuales.forEach(p => {
+                const estadoSalidaClase = p.salida === 'Dentro del evento' ? 'text-blue-600 font-semibold' : 'text-gray-500';
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50 transition-colors">
+                        <td class="p-3 font-mono">${p.carnet_universitario}</td>
+                        <td class="p-3 font-medium text-slate-700">${p.nombre}</td>
+                        <td class="p-3">${p.materia}</td>
+                        <td class="p-3 text-gray-400">${p.entrada}</td>
+                        <td class="p-3 ${estadoSalidaClase}">${p.salida}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- NUEVA FUNCIÓN PARA DESCARGAR EN EXCEL ---
+        function descargarExcel() {
+            if (datosActuales.length === 0) {
+                return alert("No hay datos registrados para descargar todavía.");
+            }
+
+            // Definimos las cabeceras del archivo Excel
+            let contenidoCsv = "Carnet Universitario,Nombre Completo,Materia,Hora Entrada,Hora Salida\n";
+
+            // Recorremos los datos y los unimos separados por comas
+            datosActuales.forEach(p => {
+                // Limpiamos posibles comas dentro de los nombres para no romper las columnas
+                let nombreLimpio = p.nombre.replace(/,/g, '');
+                let materiaLimpia = p.materia.replace(/,/g, '');
+                
+                contenidoCsv += `${p.carnet_universitario},${nombreLimpio},${materiaLimpia},${p.entrada},${p.salida}\n`;
+            });
+
+            // Creamos un elemento invisible en el navegador para forzar la descarga del archivo
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), contenidoCsv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", "reporte_asistencia_evento.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = cargarHistorial;
+    </script>
+</body>
+</html>
