@@ -4,9 +4,10 @@ from pydantic import BaseModel
 import sqlite3
 from datetime import datetime
 
+# 1. Crear la aplicación primero
 app = FastAPI()
 
-# Permitir que nuestra página HTML se comunique con Python sin problemas de permisos
+# 2. Configurar CORS INMEDIATAMENTE después de crear la app (Orden obligatorio)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Modelos de datos adaptados a los nuevos requerimientos académica
+# 3. Modelos de datos
 class RegistroEntrada(BaseModel):
     carnet_universitario: str
     nombre: str
@@ -24,7 +25,7 @@ class RegistroEntrada(BaseModel):
 class RegistroSalida(BaseModel):
     carnet_universitario: str
 
-# Configuración de Base de Datos
+# 4. Configuración de Base de Datos
 def init_db():
     conn = sqlite3.connect('asistencia_exposicion.db')
     cursor = conn.cursor()
@@ -43,6 +44,7 @@ def init_db():
 
 init_db()
 
+# 5. Rutas de la API
 @app.post("/entrada")
 def registrar_entrada(data: RegistroEntrada):
     hora_actual = datetime.now().strftime("%H:%M:%S")
@@ -62,7 +64,6 @@ def registrar_salida(data: RegistroSalida):
     conn = sqlite3.connect('asistencia_exposicion.db')
     cursor = conn.cursor()
     
-    # Buscar última entrada sin salida para este carnet
     cursor.execute(
         "SELECT id, nombre FROM registros WHERE carnet_universitario = ? AND hora_salida IS NULL ORDER BY id DESC LIMIT 1",
         (data.carnet_universitario,)
